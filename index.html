@@ -2,19 +2,40 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>貨物裝板整理工具 (GitHub 安全版)</title>
+    
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="裝板助手">
+    
+    <!-- Apple Touch Icon (使用內嵌 SVG 確保圖示清晰且不需外部資源) -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiB2aWV3Qm94PSIwIDAgMTgwIDE4MCI+CiAgPHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIHJ4PSIzNiIgZmlsbD0iIzAyODRjNyIvPgogIDxwYXRoIGQ9Ik00NSA2MEg4Nkw5MCA1MEgxNDBMMTQ1IDYwSDE1NVYxNDBIMzVWNjBINTVaIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC4xIi8+CiAgPGcgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI4IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPHBhdGggZD0iTTUwIDYwIEwxMzAgNjAgTDEzMCAxMzAgTDUwIDEzMCBaIiAvPgogICAgPHBhdGggZD0iTTUwIDkwIEwxMzAgOTAiIC8+CiAgICA8cGF0aCBkPSJNNTAgMTEwIEwxMzAgMTEwIiAvPgogICAgPHBhdGggZD0iTTgwIDYwIEw4MCAxMzAiIC8+CiAgPC9nPgo8L3N2Zz4=">
+
     <!-- 載入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f7f9fb; 
+            -webkit-tap-highlight-color: transparent; /* 移除行動端點擊高亮 */
+            -webkit-touch-callout: none; /* 禁用長按選單 */
+            user-select: none; /* 基本介面防止選取，增加 App 感 */
+        }
+        /* 允許特定區塊選取文字 */
+        .selectable { user-select: text; }
         .container { max-width: 1200px; }
         .card { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05); border-radius: 0.75rem; }
         #fileInput::file-selector-button { transition: all .15s ease-in-out; cursor: pointer; }
         input[type="file"] { border: none; }
         .modal { transition: opacity 0.25s ease; }
         body.modal-active { overflow: hidden; }
+        
+        /* 針對 iOS 安全區域優化 (如果有瀏海) */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -36,7 +57,7 @@
             <div class="flex items-center">
                 <div class="flex-shrink-0"><svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></div>
                 <div class="ml-3">
-                    <p class="text-sm text-amber-700">尚未設定 Gemini API Key。請點擊右上角齒輪圖示進行設定，否則無法使用辨識功能。</p>
+                    <p class="text-sm text-amber-700">尚未設定 Gemini API Key。請點擊右上角齒輪圖示進行設定。</p>
                 </div>
             </div>
         </div>
@@ -92,7 +113,7 @@
                             </button>
                         </div>
                     </div>
-                    <div id="outputContainer" class="space-y-6">
+                    <div id="outputContainer" class="space-y-6 selectable">
                         <p class="text-gray-500 italic text-sm">請於左側上傳圖片或選擇日期。</p>
                     </div>
                 </div>
@@ -116,7 +137,7 @@
                 <div class="my-5">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Gemini API Key</label>
                     <input type="password" id="apiKeyInput" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500" placeholder="在此貼上您的 API Key">
-                    <p class="text-xs text-gray-500 mt-2">此金鑰僅儲存於您的瀏覽器本地 (localStorage)，不會上傳至任何伺服器。</p>
+                    <p class="text-xs text-gray-500 mt-2">此金鑰僅儲存於您的瀏覽器本地 (localStorage)。</p>
                 </div>
                 <div class="flex justify-end pt-2">
                     <button id="saveApiKey" class="px-4 py-2 bg-sky-600 text-white rounded-lg font-bold hover:bg-sky-700 transition">儲存設定</button>
@@ -130,7 +151,6 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, collection, query, getDocs, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // --- 設定管理 ---
         const CONFIG = {
             API_MODEL: "gemini-2.5-flash-preview-09-2025",
             API_URL_PREFIX: "https://generativelanguage.googleapis.com/v1beta/models/",
@@ -140,37 +160,31 @@
 
         let db, auth, userId = null, isAuthReady = false, unsubscribeManifest = null, currentManifestDateId = null;
 
-        // --- 初始化檢查 ---
         function checkApiKey() {
             const savedKey = localStorage.getItem(CONFIG.STORAGE_KEY);
             const warning = document.getElementById('securityWarning');
             const btn = document.getElementById('processButton');
-            
             if (!savedKey) {
                 warning.classList.remove('hidden');
                 btn.disabled = true;
                 return null;
             } else {
                 warning.classList.add('hidden');
-                // 只有在有檔案時才啟用按鈕的邏輯在 fileInput 監聽器中處理
                 return savedKey;
             }
         }
 
-        // --- Firebase 初始化 ---
         async function initFirebase() {
             try {
                 const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
-
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
@@ -185,15 +199,12 @@
             }
         }
 
-        // --- 核心邏輯 ---
         window.handlePick = async function (itemId, isChecked) {
             const row = document.getElementById(itemId);
             if (!currentManifestDateId || !row) return;
-
             const docRef = getManifestDocRef(currentManifestDateId);
             const docSnap = await getDoc(docRef);
             const pickedState = docSnap.exists() ? docSnap.data()?.pickedState || {} : {};
-            
             if (isChecked) {
                 row.classList.add('line-through', 'opacity-70', 'bg-green-50');
                 pickedState[itemId] = true;
@@ -201,7 +212,6 @@
                 row.classList.remove('line-through', 'opacity-70', 'bg-green-50');
                 delete pickedState[itemId];
             }
-            
             await setDoc(docRef, { pickedState: pickedState }, { merge: true });
         };
 
@@ -217,7 +227,6 @@
             const querySnapshot = await getDocs(q);
             const dates = [];
             querySnapshot.forEach(d => dates.push({ id: d.id, formattedDate: d.data().formattedDate }));
-            
             if (dates.length > 0) {
                 dates.sort((a, b) => new Date(b.id) - new Date(a.id));
                 dateSelector.innerHTML = '<option value="">-- 請選擇一個日期 --</option>';
@@ -239,7 +248,6 @@
             const docRef = getManifestDocRef(dateId);
             currentManifestDateId = dateId;
             document.getElementById('deleteManifestButton').disabled = false;
-
             unsubscribeManifest = onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     renderResultsToDOM(docSnap.data().processedResults, docSnap.data().pickedState || {});
@@ -254,14 +262,12 @@
             document.getElementById('summary').classList.remove('hidden');
             document.getElementById('totalValidItems').textContent = results.totalValidItems;
             document.getElementById('totalPallets').textContent = results.totalPallets;
-
             const styles = {
                 P1: { name: "板 1：指定調味品", color: "violet", note: "1 板" },
                 P2: { name: "板 2：指定產品 (BH-20/BX-20)", color: "amber", note: `${results.p2Pallets} 板` },
                 P3: { name: "板 3：單位「板」貨物", color: "emerald", note: `${results.Pallet3Items.reduce((s, i) => s + i.qty, 0)} 板` },
                 Misc: { name: "雜項板位", color: "sky", note: "1 板" }
             };
-
             [ {t:'P1', i:results.Pallet1Items}, {t:'P2', i:results.Pallet2Items}, {t:'P3', i:results.Pallet3Items}, {t:'Misc', i:results.MiscellaneousItems} ].forEach(g => {
                 if (g.i.length === 0) return;
                 const s = styles[g.t];
@@ -271,8 +277,8 @@
                 g.i.forEach(item => {
                     const picked = pickedState[item.id];
                     html += `<tr id="${item.id}" class="border-b border-gray-50 ${picked ? 'line-through opacity-70 bg-green-50' : ''}">
-                        <td class="p-2 w-8"><input type="checkbox" onchange="window.handlePick('${item.id}', this.checked)" ${picked ? 'checked' : ''}></td>
-                        <td class="p-2">${item.item}</td><td class="p-2 text-right font-bold">${item.qty} ${item.uom}</td>
+                        <td class="p-2 w-8 text-center"><input type="checkbox" class="w-4 h-4" onchange="window.handlePick('${item.id}', this.checked)" ${picked ? 'checked' : ''}></td>
+                        <td class="p-2">${item.item}</td><td class="p-2 text-right font-bold whitespace-nowrap">${item.qty} ${item.uom}</td>
                     </tr>`;
                 });
                 div.innerHTML = html + `</table>`;
@@ -283,46 +289,36 @@
         async function processImage(file) {
             const apiKey = checkApiKey();
             if (!apiKey) throw new Error("請先設定 API Key");
-
             const base64 = await new Promise(r => {
                 const reader = new FileReader();
                 reader.onload = () => r(reader.result.split(',')[1]);
                 reader.readAsDataURL(file);
             });
-            
             const prompt = "Extract Date, Item, UoM, Qty where Qty > 0. JSON output only.";
             const schema = { type:"OBJECT", properties:{ date:{type:"STRING"}, items:{type:"ARRAY", items:{type:"OBJECT", properties:{item:{type:"STRING"}, uom:{type:"STRING"}, qty:{type:"NUMBER"}}, required:["item","uom","qty"]}}}, required:["date","items"]};
-            
             const url = `${CONFIG.API_URL_PREFIX}${CONFIG.API_MODEL}:generateContent?key=${apiKey}`;
             const response = await fetch(url, {
                 method: 'POST',
                 body: JSON.stringify({ contents:[{parts:[{text:prompt}, {inlineData:{mimeType:file.type, data:base64}}]}], generationConfig:{responseMimeType:"application/json", responseSchema:schema} })
             });
-            
-            if (!response.ok) throw new Error("API 請求失敗，請檢查金鑰是否正確");
-            
+            if (!response.ok) throw new Error("API 請求失敗，請檢查金鑰");
             const res = await response.json();
             const data = JSON.parse(res.candidates[0].content.parts[0].text);
-            
             const items = data.items.map((it, idx) => ({ ...it, id: `item-${idx}` }));
             const p1 = items.filter(i => ["Fine Sugar", "Vinegar", "Peach"].some(k => i.item.includes(k)));
             const p2 = items.filter(i => !p1.includes(i) && ["BH-20", "BX-20", "Sushi Tray"].some(k => i.item.includes(k)));
             const p3 = items.filter(i => !p1.includes(i) && !p2.includes(i) && i.uom === "板");
             const misc = items.filter(i => !p1.includes(i) && !p2.includes(i) && !p3.includes(i));
-            
             const p2Qty = p2.reduce((s,i) => s+i.qty, 0);
             const p2P = Math.ceil(p2Qty / 31);
             const p3P = p3.reduce((s,i) => s+i.qty, 0);
             const total = (p1.length?1:0) + p2P + p3P + (misc.length?1:0);
-
             const results = { Pallet1Items:p1, Pallet2Items:p2, Pallet3Items:p3, MiscellaneousItems:misc, totalValidItems:items.length, totalPallets:total, p2Pallets:p2P };
             const formattedDate = new Date(data.date).toLocaleDateString('zh-Hant', { year:'numeric', month:'long', day:'numeric', weekday:'long' }).replace(' ', ' (').concat(')');
-            
             await setDoc(getManifestDocRef(data.date), { dateId: data.date, formattedDate, processedResults: results, pickedState: {} });
             fetchAvailableDates();
         }
 
-        // --- 事件監聽 ---
         const imagePreview = document.getElementById('imagePreview');
         const previewPlaceholder = document.getElementById('previewPlaceholder');
         const processButton = document.getElementById('processButton');
@@ -340,26 +336,19 @@
             err.classList.add('hidden');
             loadingIndicator.classList.remove('hidden'); 
             processButton.disabled = true;
-            try { 
-                await processImage(document.getElementById('fileInput').files[0]); 
-            } catch (e) { 
-                err.textContent = e.message; 
-                err.classList.remove('hidden'); 
-            }
+            try { await processImage(document.getElementById('fileInput').files[0]); } catch (e) { err.textContent = e.message; err.classList.remove('hidden'); }
             loadingIndicator.classList.add('hidden'); 
             processButton.disabled = false;
         });
 
         document.getElementById('deleteManifestButton').addEventListener('click', async () => {
             if (currentManifestDateId && confirm('確定要刪除這筆紀錄嗎？')) { 
-                await deleteDoc(getManifestDocRef(currentManifestDateId)); 
-                fetchAvailableDates(); 
+                await deleteDoc(getManifestDocRef(currentManifestDateId)); fetchAvailableDates(); 
             }
         });
 
         document.getElementById('dateSelector').addEventListener('change', e => { if (e.target.value) loadManifestByDate(e.target.value); });
 
-        // --- Modal 控制 ---
         const openModalBtn = document.getElementById('openSettings');
         const closeModalBtn = document.getElementById('closeModal');
         const modal = document.getElementById('settingsModal');
@@ -379,14 +368,8 @@
         closeModalBtn.addEventListener('click', toggleModal);
         saveBtn.addEventListener('click', () => {
             const key = keyInput.value.trim();
-            if (key) {
-                localStorage.setItem(CONFIG.STORAGE_KEY, key);
-                toggleModal();
-                checkApiKey();
-                alert('API Key 已儲存！');
-            } else {
-                alert('請輸入有效的金鑰');
-            }
+            if (key) { localStorage.setItem(CONFIG.STORAGE_KEY, key); toggleModal(); checkApiKey(); alert('API Key 已儲存！'); }
+            else { alert('請輸入金鑰'); }
         });
 
         initFirebase();
