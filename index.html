@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>貨物裝板整理工具 (GitHub 安全版)</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        .container { max-width: 1200px; }
+        .card { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05); border-radius: 0.75rem; }
+        #fileInput::file-selector-button { transition: all .15s ease-in-out; cursor: pointer; }
+        input[type="file"] { border: none; }
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow: hidden; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="container mx-auto">
+        <div class="flex justify-between items-center mb-6 border-b pb-2">
+            <h1 class="text-3xl font-bold text-gray-800">📦 貨物裝板整理工具</h1>
+            <!-- 設定按鈕 -->
+            <button id="openSettings" class="p-2 rounded-full hover:bg-gray-200 transition" title="API 設定">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- 金鑰缺失警告 -->
+        <div id="securityWarning" class="hidden bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0"><svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg></div>
+                <div class="ml-3">
+                    <p class="text-sm text-amber-700">尚未設定 Gemini API Key。請點擊右上角齒輪圖示進行設定，否則無法使用辨識功能。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1">
+                <div class="card bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-3 text-gray-700">🗓️ 選擇或處理清單</h2>
+                    
+                    <p id="firebaseStatus" class="text-xs font-medium text-amber-600 mb-3 flex items-center">
+                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        正在連線到資料庫...
+                    </p>
+
+                    <div class="mb-4">
+                        <label for="dateSelector" class="block text-sm font-medium text-gray-700 mb-1">已儲存的日期</label>
+                        <select id="dateSelector" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 disabled:opacity-70 text-sm" disabled>
+                            <option value="">-- 正在載入 --</option>
+                        </select>
+                        <p id="selectedDateDisplay" class="mt-2 text-sm font-bold text-sky-600 h-5"></p>
+                    </div>
+
+                    <h3 class="text-lg font-semibold mt-6 mb-3 text-gray-700 border-t pt-4 text-sm">上傳新清單照片</h3>
+                    <input type="file" id="fileInput" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 mb-2">
+                    
+                    <div id="imagePreviewContainer" class="mb-4 border-2 border-dashed border-gray-300 rounded-xl p-2 flex justify-center items-center h-48 bg-gray-50 overflow-hidden">
+                        <img id="imagePreview" src="" alt="圖片預覽" class="max-h-full max-w-full object-contain hidden">
+                        <span id="previewPlaceholder" class="text-gray-400 text-sm">請選擇一張圖片</span>
+                    </div>
+
+                    <button id="processButton" class="w-full mt-4 py-3 px-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition duration-150 shadow-md shadow-green-300 disabled:opacity-50" disabled>
+                        開始辨識並儲存
+                    </button>
+                    <p id="loadingIndicator" class="text-sky-600 mt-2 hidden text-center font-semibold text-sm flex items-center justify-center">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-sky-500" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        正在辨識中，請稍候...
+                    </p>
+                    <p id="error-message" class="text-red-600 mt-2 hidden text-xs"></p>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="card bg-white p-6 rounded-xl shadow-lg min-h-[500px]">
+                    <div class="flex justify-between items-center border-b-2 border-gray-100 pb-2 mb-4">
+                        <h3 class="text-lg font-bold text-gray-700">✅ 裝板清單結果</h3>
+                        <div class="flex items-center space-x-4">
+                            <div id="summary" class="hidden text-sm flex space-x-3 bg-sky-50 px-3 py-1 rounded-full">
+                                <span class="text-gray-600">有效: <b id="totalValidItems" class="text-sky-600">0</b></span>
+                                <span class="text-gray-600">總板: <b id="totalPallets" class="text-sky-600">0</b></span>
+                            </div>
+                            <button id="deleteManifestButton" class="text-xs text-red-500 font-medium hover:text-red-700 disabled:opacity-50" disabled>
+                                刪除此紀錄
+                            </button>
+                        </div>
+                    </div>
+                    <div id="outputContainer" class="space-y-6">
+                        <p class="text-gray-500 italic text-sm">請於左側上傳圖片或選擇日期。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 設定彈出視窗 -->
+    <div id="settingsModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded-xl shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3">
+                    <p class="text-2xl font-bold">API 設定</p>
+                    <div id="closeModal" class="modal-close cursor-pointer z-50">
+                        <svg class="fill-current text-black" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
+                            <path d="M14.53 4.53l-1.06-1.06L9 7.94 4.53 3.47 3.47 4.53 7.94 9l-4.47 4.47 1.06 1.06L9 10.06l4.47 4.47 1.06-1.06L10.06 9z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="my-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Gemini API Key</label>
+                    <input type="password" id="apiKeyInput" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-sky-500 focus:border-sky-500" placeholder="在此貼上您的 API Key">
+                    <p class="text-xs text-gray-500 mt-2">此金鑰僅儲存於您的瀏覽器本地 (localStorage)，不會上傳至任何伺服器。</p>
+                </div>
+                <div class="flex justify-end pt-2">
+                    <button id="saveApiKey" class="px-4 py-2 bg-sky-600 text-white rounded-lg font-bold hover:bg-sky-700 transition">儲存設定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, query, getDocs, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- 設定管理 ---
+        const CONFIG = {
+            API_MODEL: "gemini-2.5-flash-preview-09-2025",
+            API_URL_PREFIX: "https://generativelanguage.googleapis.com/v1beta/models/",
+            MAX_RETRIES: 3,
+            STORAGE_KEY: 'PALLET_APP_GEMINI_KEY'
+        };
+
+        let db, auth, userId = null, isAuthReady = false, unsubscribeManifest = null, currentManifestDateId = null;
+
+        // --- 初始化檢查 ---
+        function checkApiKey() {
+            const savedKey = localStorage.getItem(CONFIG.STORAGE_KEY);
+            const warning = document.getElementById('securityWarning');
+            const btn = document.getElementById('processButton');
+            
+            if (!savedKey) {
+                warning.classList.remove('hidden');
+                btn.disabled = true;
+                return null;
+            } else {
+                warning.classList.add('hidden');
+                // 只有在有檔案時才啟用按鈕的邏輯在 fileInput 監聽器中處理
+                return savedKey;
+            }
+        }
+
+        // --- Firebase 初始化 ---
+        async function initFirebase() {
+            try {
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        document.getElementById('firebaseStatus').textContent = '✅ 資料庫連線成功';
+                        document.getElementById('firebaseStatus').className = 'text-xs font-medium text-green-600 mb-3 flex items-center';
+                        fetchAvailableDates();
+                    }
+                });
+            } catch (e) {
+                document.getElementById('firebaseStatus').textContent = '❌ 連線失敗';
+            }
+        }
+
+        // --- 核心邏輯 ---
+        window.handlePick = async function (itemId, isChecked) {
+            const row = document.getElementById(itemId);
+            if (!currentManifestDateId || !row) return;
+
+            const docRef = getManifestDocRef(currentManifestDateId);
+            const docSnap = await getDoc(docRef);
+            const pickedState = docSnap.exists() ? docSnap.data()?.pickedState || {} : {};
+            
+            if (isChecked) {
+                row.classList.add('line-through', 'opacity-70', 'bg-green-50');
+                pickedState[itemId] = true;
+            } else {
+                row.classList.remove('line-through', 'opacity-70', 'bg-green-50');
+                delete pickedState[itemId];
+            }
+            
+            await setDoc(docRef, { pickedState: pickedState }, { merge: true });
+        };
+
+        function getManifestDocRef(dateId) {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            return doc(db, 'artifacts', appId, 'users', userId, 'manifests', dateId);
+        }
+
+        async function fetchAvailableDates() {
+            const dateSelector = document.getElementById('dateSelector');
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const q = query(collection(db, 'artifacts', appId, 'users', userId, 'manifests'));
+            const querySnapshot = await getDocs(q);
+            const dates = [];
+            querySnapshot.forEach(d => dates.push({ id: d.id, formattedDate: d.data().formattedDate }));
+            
+            if (dates.length > 0) {
+                dates.sort((a, b) => new Date(b.id) - new Date(a.id));
+                dateSelector.innerHTML = '<option value="">-- 請選擇一個日期 --</option>';
+                dates.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id; opt.textContent = d.formattedDate;
+                    dateSelector.appendChild(opt);
+                });
+                dateSelector.disabled = false;
+                dateSelector.value = dates[0].id;
+                loadManifestByDate(dates[0].id);
+            } else {
+                dateSelector.innerHTML = '<option value="">-- 無已儲存紀錄 --</option>';
+            }
+        }
+
+        function loadManifestByDate(dateId) {
+            if (unsubscribeManifest) unsubscribeManifest();
+            const docRef = getManifestDocRef(dateId);
+            currentManifestDateId = dateId;
+            document.getElementById('deleteManifestButton').disabled = false;
+
+            unsubscribeManifest = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    renderResultsToDOM(docSnap.data().processedResults, docSnap.data().pickedState || {});
+                    document.getElementById('selectedDateDisplay').textContent = docSnap.data().formattedDate;
+                }
+            });
+        }
+
+        function renderResultsToDOM(results, pickedState) {
+            const container = document.getElementById('outputContainer');
+            container.innerHTML = '';
+            document.getElementById('summary').classList.remove('hidden');
+            document.getElementById('totalValidItems').textContent = results.totalValidItems;
+            document.getElementById('totalPallets').textContent = results.totalPallets;
+
+            const styles = {
+                P1: { name: "板 1：指定調味品", color: "violet", note: "1 板" },
+                P2: { name: "板 2：指定產品 (BH-20/BX-20)", color: "amber", note: `${results.p2Pallets} 板` },
+                P3: { name: "板 3：單位「板」貨物", color: "emerald", note: `${results.Pallet3Items.reduce((s, i) => s + i.qty, 0)} 板` },
+                Misc: { name: "雜項板位", color: "sky", note: "1 板" }
+            };
+
+            [ {t:'P1', i:results.Pallet1Items}, {t:'P2', i:results.Pallet2Items}, {t:'P3', i:results.Pallet3Items}, {t:'Misc', i:results.MiscellaneousItems} ].forEach(g => {
+                if (g.i.length === 0) return;
+                const s = styles[g.t];
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl shadow-sm bg-white border-l-4 border-${s.color}-500 mb-4`;
+                let html = `<div class="flex justify-between items-center mb-2"><h4 class="font-bold text-gray-800 text-sm">${s.name}</h4><span class="text-[10px] bg-${s.color}-100 text-${s.color}-700 px-2 py-0.5 rounded-full">${s.note}</span></div><table class="w-full text-xs">`;
+                g.i.forEach(item => {
+                    const picked = pickedState[item.id];
+                    html += `<tr id="${item.id}" class="border-b border-gray-50 ${picked ? 'line-through opacity-70 bg-green-50' : ''}">
+                        <td class="p-2 w-8"><input type="checkbox" onchange="window.handlePick('${item.id}', this.checked)" ${picked ? 'checked' : ''}></td>
+                        <td class="p-2">${item.item}</td><td class="p-2 text-right font-bold">${item.qty} ${item.uom}</td>
+                    </tr>`;
+                });
+                div.innerHTML = html + `</table>`;
+                container.appendChild(div);
+            });
+        }
+
+        async function processImage(file) {
+            const apiKey = checkApiKey();
+            if (!apiKey) throw new Error("請先設定 API Key");
+
+            const base64 = await new Promise(r => {
+                const reader = new FileReader();
+                reader.onload = () => r(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+            
+            const prompt = "Extract Date, Item, UoM, Qty where Qty > 0. JSON output only.";
+            const schema = { type:"OBJECT", properties:{ date:{type:"STRING"}, items:{type:"ARRAY", items:{type:"OBJECT", properties:{item:{type:"STRING"}, uom:{type:"STRING"}, qty:{type:"NUMBER"}}, required:["item","uom","qty"]}}}, required:["date","items"]};
+            
+            const url = `${CONFIG.API_URL_PREFIX}${CONFIG.API_MODEL}:generateContent?key=${apiKey}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                body: JSON.stringify({ contents:[{parts:[{text:prompt}, {inlineData:{mimeType:file.type, data:base64}}]}], generationConfig:{responseMimeType:"application/json", responseSchema:schema} })
+            });
+            
+            if (!response.ok) throw new Error("API 請求失敗，請檢查金鑰是否正確");
+            
+            const res = await response.json();
+            const data = JSON.parse(res.candidates[0].content.parts[0].text);
+            
+            const items = data.items.map((it, idx) => ({ ...it, id: `item-${idx}` }));
+            const p1 = items.filter(i => ["Fine Sugar", "Vinegar", "Peach"].some(k => i.item.includes(k)));
+            const p2 = items.filter(i => !p1.includes(i) && ["BH-20", "BX-20", "Sushi Tray"].some(k => i.item.includes(k)));
+            const p3 = items.filter(i => !p1.includes(i) && !p2.includes(i) && i.uom === "板");
+            const misc = items.filter(i => !p1.includes(i) && !p2.includes(i) && !p3.includes(i));
+            
+            const p2Qty = p2.reduce((s,i) => s+i.qty, 0);
+            const p2P = Math.ceil(p2Qty / 31);
+            const p3P = p3.reduce((s,i) => s+i.qty, 0);
+            const total = (p1.length?1:0) + p2P + p3P + (misc.length?1:0);
+
+            const results = { Pallet1Items:p1, Pallet2Items:p2, Pallet3Items:p3, MiscellaneousItems:misc, totalValidItems:items.length, totalPallets:total, p2Pallets:p2P };
+            const formattedDate = new Date(data.date).toLocaleDateString('zh-Hant', { year:'numeric', month:'long', day:'numeric', weekday:'long' }).replace(' ', ' (').concat(')');
+            
+            await setDoc(getManifestDocRef(data.date), { dateId: data.date, formattedDate, processedResults: results, pickedState: {} });
+            fetchAvailableDates();
+        }
+
+        // --- 事件監聽 ---
+        const imagePreview = document.getElementById('imagePreview');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const processButton = document.getElementById('processButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        document.getElementById('fileInput').addEventListener('change', e => {
+            if (e.target.files[0]) {
+                const r = new FileReader(); r.onload = ev => { imagePreview.src = ev.target.result; imagePreview.classList.remove('hidden'); previewPlaceholder.classList.add('hidden'); if(checkApiKey()) processButton.disabled = false; };
+                r.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        processButton.addEventListener('click', async () => {
+            const err = document.getElementById('error-message');
+            err.classList.add('hidden');
+            loadingIndicator.classList.remove('hidden'); 
+            processButton.disabled = true;
+            try { 
+                await processImage(document.getElementById('fileInput').files[0]); 
+            } catch (e) { 
+                err.textContent = e.message; 
+                err.classList.remove('hidden'); 
+            }
+            loadingIndicator.classList.add('hidden'); 
+            processButton.disabled = false;
+        });
+
+        document.getElementById('deleteManifestButton').addEventListener('click', async () => {
+            if (currentManifestDateId && confirm('確定要刪除這筆紀錄嗎？')) { 
+                await deleteDoc(getManifestDocRef(currentManifestDateId)); 
+                fetchAvailableDates(); 
+            }
+        });
+
+        document.getElementById('dateSelector').addEventListener('change', e => { if (e.target.value) loadManifestByDate(e.target.value); });
+
+        // --- Modal 控制 ---
+        const openModalBtn = document.getElementById('openSettings');
+        const closeModalBtn = document.getElementById('closeModal');
+        const modal = document.getElementById('settingsModal');
+        const saveBtn = document.getElementById('saveApiKey');
+        const keyInput = document.getElementById('apiKeyInput');
+
+        function toggleModal() {
+            modal.classList.toggle('opacity-0');
+            modal.classList.toggle('pointer-events-none');
+            document.body.classList.toggle('modal-active');
+            if (!modal.classList.contains('opacity-0')) {
+                keyInput.value = localStorage.getItem(CONFIG.STORAGE_KEY) || '';
+            }
+        }
+
+        openModalBtn.addEventListener('click', toggleModal);
+        closeModalBtn.addEventListener('click', toggleModal);
+        saveBtn.addEventListener('click', () => {
+            const key = keyInput.value.trim();
+            if (key) {
+                localStorage.setItem(CONFIG.STORAGE_KEY, key);
+                toggleModal();
+                checkApiKey();
+                alert('API Key 已儲存！');
+            } else {
+                alert('請輸入有效的金鑰');
+            }
+        });
+
+        initFirebase();
+        checkApiKey();
+    </script>
+</body>
+</html>
